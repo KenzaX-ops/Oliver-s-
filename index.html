@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Request List</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen py-10 px-4">
+
+    <div class="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-2">ယာဉ်တောင်းဆိုမှုများ စာရင်း</h2>
+        <p class="text-center text-sm text-gray-600 mb-6">(Vehicle Request Information)</p>
+
+        <!-- Loading Text -->
+        <div id="loading" class="text-center text-gray-500 py-4">အချက်အလက်များ ရယူနေပါသည်...</div>
+
+        <!-- Table Container -->
+        <div class="overflow-x-auto hidden" id="tableContainer">
+            <table class="w-full border-collapse bg-white text-left text-sm text-gray-500">
+                <thead class="bg-gray-800 text-white">
+                    <tr>
+                        <th class="p-3">ရက်စွဲ</th>
+                        <th class="p-3">အမည်</th>
+                        <th class="p-3">ဌာန</th>
+                        <th class="p-3">အကြောင်းအရာ</th>
+                        <th class="p-3">သွားမည့်နေရာ</th>
+                        <th class="p-3">ထွက်ခွာမည့်အချိန်</th>
+                        <th class="p-3">ပြန်လာမည့်အချိန်</th>
+                        <th class="p-3">ဦးရေ</th>
+                        <th class="p-3">အခြေအနေ</th>
+                    </tr>
+                </thead>
+                <tbody id="requestTableBody" class="divide-y divide-gray-200">
+                    <!-- JavaScript ကနေ ဒေတာတွေ ဒီထဲကို ထည့်ပေးပါမယ် -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- JavaScript to Fetch Google Sheet Data -->
+    <script>
+        // သင့်ရဲ့ Google Apps Script Web App URL ထည့်ရန်
+        const WEB_APP_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+        async function fetchVehicleRequests() {
+            try {
+                const response = await fetch(WEB_APP_URL);
+                const data = await response.json();
+
+                const tableBody = document.getElementById('requestTableBody');
+                const loading = document.getElementById('loading');
+                const tableContainer = document.getElementById('tableContainer');
+
+                tableBody.innerHTML = '';
+
+                if (data.length === 0) {
+                    loading.textContent = "တောင်းဆိုချက်များ မရှိသေးပါ။";
+                    return;
+                }
+
+                // ဒေတာ တစ်ခုချင်းစီကို Table ထဲ ထည့်ခြင်း
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50";
+
+                    // Status အရ အရောင်ပြောင်းရန်
+                    let statusClass = "px-2 py-1 rounded text-xs font-semibold ";
+                    if (row.Status === "Approved") statusClass += "bg-green-100 text-green-700";
+                    else if (row.Status === "Rejected") statusClass += "bg-red-100 text-red-700";
+                    else statusClass += "bg-yellow-100 text-yellow-700";
+
+                    tr.innerHTML = `
+                        <td class="p-3">${row.RequestDate || ''}</td>
+                        <td class="p-3 font-medium text-gray-900">${row.RequesterName || ''}</td>
+                        <td class="p-3">${row.Department || ''}</td>
+                        <td class="p-3">${row.Purpose || ''}</td>
+                        <td class="p-3">${row.Destination || ''}</td>
+                        <td class="p-3">${row.DepartureTime || ''}</td>
+                        <td class="p-3">${row.ReturnTime || ''}</td>
+                        <td class="p-3">${row.PassengerCount || ''}</td>
+                        <td class="p-3"><span class="${statusClass}">${row.Status || 'Pending'}</span></td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+
+                loading.classList.add('hidden');
+                tableContainer.classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('loading').textContent = "ဒေတာဆွဲထုတ်ရာတွင် အမှားအယွင်း ရှိသွားပါသည်။";
+            }
+        }
+
+        fetchVehicleRequests();
+    </script>
+</body>
+</html>
