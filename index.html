@@ -4,21 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vehicle Request List</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen py-10 px-4">
+<body class="bg-gray-100 min-h-screen py-8 px-4">
 
     <div class="max-w-6xl mx-auto bg-white rounded-lg shadow-md p-6">
         <h2 class="text-2xl font-bold text-center text-gray-800 mb-2">ယာဉ်တောင်းဆိုမှုများ စာရင်း</h2>
         <p class="text-center text-sm text-gray-600 mb-6">(Vehicle Request Information)</p>
 
-        <!-- Loading Text -->
         <div id="loading" class="text-center text-gray-500 py-4">အချက်အလက်များ ရယူနေပါသည်...</div>
 
-        <!-- Table Container -->
         <div class="overflow-x-auto hidden" id="tableContainer">
-            <table class="w-full border-collapse bg-white text-left text-sm text-gray-500">
+            <table class="w-full border-collapse bg-white text-left text-sm text-gray-600">
                 <thead class="bg-gray-800 text-white">
                     <tr>
                         <th class="p-3">ရက်စွဲ</th>
@@ -32,22 +29,23 @@
                         <th class="p-3">အခြေအနေ</th>
                     </tr>
                 </thead>
-                <tbody id="requestTableBody" class="divide-y divide-gray-200">
-                    <!-- JavaScript ကနေ ဒေတာတွေ ဒီထဲကို ထည့်ပေးပါမယ် -->
-                </tbody>
+                <tbody id="requestTableBody" class="divide-y divide-gray-200"></tbody>
             </table>
         </div>
     </div>
 
-    <!-- JavaScript to Fetch Google Sheet Data -->
     <script>
-        // သင့်ရဲ့ Google Apps Script Web App URL ထည့်ရန်
-        const WEB_APP_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+        const SHEET_ID = "1_Yc-scEFwl338B-0s2CmrsyCnke_mUoo7VfCGR0nlrI";
+        const SHEET_NAME = "Requests";
+        const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME}`;
 
-        async function fetchVehicleRequests() {
+        async function loadSheetData() {
             try {
-                const response = await fetch(WEB_APP_URL);
-                const data = await response.json();
+                const response = await fetch(URL);
+                const text = await response.text();
+                // Google Visualization JSON format ကို ရှင်းထုတ်ခြင်း
+                const json = JSON.parse(text.substring(47).slice(0, -2));
+                const rows = json.table.rows;
 
                 const tableBody = document.getElementById('requestTableBody');
                 const loading = document.getElementById('loading');
@@ -55,32 +53,41 @@
 
                 tableBody.innerHTML = '';
 
-                if (data.length === 0) {
+                if (!rows || rows.length === 0) {
                     loading.textContent = "တောင်းဆိုချက်များ မရှိသေးပါ။";
                     return;
                 }
 
-                // ဒေတာ တစ်ခုချင်းစီကို Table ထဲ ထည့်ခြင်း
-                data.forEach(row => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-gray-50";
+                rows.forEach(row => {
+                    const c = row.c;
+                    // Column index: 0=Timestamp, 1=RequestDate, 2=RequesterName, 3=Department, 4=Purpose, 5=Destination, 6=DepartureTime, 7=ReturnTime, 8=PassengerCount, 9=Status
+                    const reqDate = c[1] ? (c[1].f || c[1].v || '') : '';
+                    const name = c[2] ? (c[2].v || '') : '';
+                    const dept = c[3] ? (c[3].v || '') : '';
+                    const purpose = c[4] ? (c[4].v || '') : '';
+                    const dest = c[5] ? (c[5].v || '') : '';
+                    const depTime = c[6] ? (c[6].f || c[6].v || '') : '';
+                    const retTime = c[7] ? (c[7].f || c[7].v || '') : '';
+                    const count = c[8] ? (c[8].v || '') : '';
+                    const status = c[9] ? (c[9].v || 'Pending') : 'Pending';
 
-                    // Status အရ အရောင်ပြောင်းရန်
                     let statusClass = "px-2 py-1 rounded text-xs font-semibold ";
-                    if (row.Status === "Approved") statusClass += "bg-green-100 text-green-700";
-                    else if (row.Status === "Rejected") statusClass += "bg-red-100 text-red-700";
+                    if (status === "Approved") statusClass += "bg-green-100 text-green-700";
+                    else if (status === "Rejected") statusClass += "bg-red-100 text-red-700";
                     else statusClass += "bg-yellow-100 text-yellow-700";
 
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50";
                     tr.innerHTML = `
-                        <td class="p-3">${row.RequestDate || ''}</td>
-                        <td class="p-3 font-medium text-gray-900">${row.RequesterName || ''}</td>
-                        <td class="p-3">${row.Department || ''}</td>
-                        <td class="p-3">${row.Purpose || ''}</td>
-                        <td class="p-3">${row.Destination || ''}</td>
-                        <td class="p-3">${row.DepartureTime || ''}</td>
-                        <td class="p-3">${row.ReturnTime || ''}</td>
-                        <td class="p-3">${row.PassengerCount || ''}</td>
-                        <td class="p-3"><span class="${statusClass}">${row.Status || 'Pending'}</span></td>
+                        <td class="p-3">${reqDate}</td>
+                        <td class="p-3 font-medium text-gray-900">${name}</td>
+                        <td class="p-3">${dept}</td>
+                        <td class="p-3">${purpose}</td>
+                        <td class="p-3">${dest}</td>
+                        <td class="p-3">${depTime}</td>
+                        <td class="p-3">${retTime}</td>
+                        <td class="p-3">${count}</td>
+                        <td class="p-3"><span class="${statusClass}">${status}</span></td>
                     `;
                     tableBody.appendChild(tr);
                 });
@@ -89,12 +96,12 @@
                 tableContainer.classList.remove('hidden');
 
             } catch (error) {
-                console.error('Error fetching data:', error);
-                document.getElementById('loading').textContent = "ဒေတာဆွဲထုတ်ရာတွင် အမှားအယွင်း ရှိသွားပါသည်။";
+                console.error(error);
+                document.getElementById('loading').textContent = "ဒေတာဆွဲထုတ်ရာတွင် အမှားရှိနေပါသည်။ Google Sheet ကို Anyone with the link (Viewer) ဖွင့်ထားကြောင်း စစ်ဆေးပါ။";
             }
         }
 
-        fetchVehicleRequests();
+        loadSheetData();
     </script>
 </body>
 </html>
